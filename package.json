@@ -1,0 +1,9 @@
+{
+  "name": "spotify-map",
+  "version": "1.0.0",
+  "description": "Spotify Top 100 Artists Map",
+  "scripts": {
+    "start": "node scripts/spotify_image_proxy.js",
+    "serve": "node scripts/spotify_image_proxy.js"
+  }
+}

@@ -1,0 +1,2200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spotify Top 100 Artists Map</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #121212;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  header {
+    background: #000;
+    padding: 15px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #282828;
+    z-index: 10;
+  }
+
+  .logo {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: #1DB954;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: #b3b3b3;
+    margin-top: 4px;
+  }
+
+  .sources-note {
+    font-size: 11px;
+    color: #b3b3b3;
+    margin-top: 4px;
+  }
+  .sources-note a {
+    color: #1DB954;
+    text-decoration: none;
+  }
+  .sources-note a:hover { text-decoration: underline; }
+
+  .search-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .search-input {
+    padding: 8px 14px;
+    border-radius: 20px;
+    border: 1px solid #282828;
+    background: #181818;
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    width: 200px;
+  }
+  .search-input::placeholder {
+    color: #727272;
+  }
+  .search-input:focus {
+    outline: none;
+    border-color: #1DB954;
+  }
+  .search-btn {
+    padding: 8px 16px;
+    background: #1DB954;
+    color: #000;
+    border: none;
+    border-radius: 20px;
+    font-weight: 600;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .search-btn:hover {
+    background: #1ed760;
+  }
+
+  .main-container {
+    display: flex;
+    flex: 1;
+    position: relative;
+  }
+
+  #map {
+    flex: 1;
+    width: 100%;
+    position: relative;
+    min-height: 400px;
+  }
+  #map gmp-map-3d {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Info Panel */
+  #info-panel {
+    width: 398px;
+    background: #181818;
+    border-left: 1px solid #282828;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 10;
+    overflow-y: auto;
+    margin: 10px;
+    border-radius: 20px;
+    height: fit-content;
+  }
+
+  #info-panel.visible {
+    transform: translateX(0);
+  }
+
+  #panel-loading {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    z-index: 20;
+  }
+
+  .close-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: #b3b3b3;
+    font-size: 24px;
+    cursor: pointer;
+  }
+  .close-btn:hover { color: #fff; }
+
+  .panel-hero {
+    position: relative;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .panel-artist-img {
+    width: 100%;
+    height: 440px;
+    object-fit: cover;
+    display: block;
+    background: #282828;
+  }
+
+  .panel-hero-overlay {
+    position: absolute;
+    inset: auto 0 0 0;
+    padding: 100px 16px 14px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 1), rgba(0, 0, 0, 0.0));
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .panel-rank {
+    font-size: 16px;
+    font-weight: bold;
+    color: #1DB954;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    
+  }
+
+  .panel-name {
+    font-size: 26px;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  .panel-stats-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .panel-stats-row.single {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .panel-stat-box {
+    background: #282828;
+    padding: 16px;
+    border-radius: 8px;
+  }
+
+  .panel-stat-value {
+    font-size: 24px;
+    font-weight: 800;
+    color: #fff;
+  }
+
+  .panel-stat-label {
+    font-size: 12px;
+    color: #b3b3b3;
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .panel-section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #b3b3b3;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .panel-desc {
+    font-size: 15px;
+    line-height: 1.5;
+    color: #e5e5e5;
+  }
+
+  /* Desc + Spotify button side by side */
+  .desc-spotify-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+
+  .desc-spotify-row .spotify-btn {
+    margin-bottom: 0;   /* override the standalone bottom margin */
+    white-space: nowrap;
+    align-self: center;
+  }
+
+  .origin-nav-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .origin-nav-row > div:first-child {
+    flex: 1;
+    padding-right: 16px;
+  }
+
+  .origin-nav-row .nav-buttons {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .nav-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #282828;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, transform 0.1s;
+  }
+
+  .nav-btn:hover { background: #3e3e3e; }
+  .nav-btn:active { transform: scale(0.92); }
+  .nav-btn svg { width: 24px; height: 24px; fill: currentColor; }
+
+  .panel-location {
+    font-size: 15px;
+    color: #e5e5e5;
+    margin-bottom: 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .panel-members {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #b3b3b3;
+    background: #282828;
+    padding: 16px;
+    border-radius: 8px;
+  }
+
+  /* Custom Pins */
+  .custom-pin {
+    background: #1DB954;
+    color: #ffffff;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    border: 1px solid #fff;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: transform 0.2s, background 0.2s;
+  }
+
+  .custom-pin:hover {
+    transform: scale(1.1);
+    background: #1ed760;
+    z-index: 1000;
+  }
+
+
+  .spotify-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #1DB954;
+    color: #000;
+    text-decoration: none;
+    padding: 10px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 24px;
+    transition: transform 0.2s, background 0.2s;
+  }
+  .spotify-btn:hover {
+    background: #1ed760;
+    transform: scale(1.02);
+  }
+  .spotify-icon {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+  }
+
+  /* ── Mobile / Responsive ────────────────────────────────────────────── */
+  @media (max-width: 600px) {
+
+    /* Header: stack logo above search */
+    header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 16px;
+    }
+
+    .search-wrap {
+      width: 100%;
+    }
+
+    .search-input {
+      flex: 1;
+      width: 0;          /* let flex grow fill remaining space */
+    }
+
+    .search-btn {
+      flex-shrink: 0;
+    }
+
+    /* Info panel becomes a bottom sheet */
+    #info-panel {
+      /* Reset desktop positioning */
+      position: fixed;
+      right: 0;
+      left: 0;
+      bottom: 0;
+      top: auto;
+      width: 100%;
+      max-height: 80vh;
+      border-radius: 20px 20px 0 0;
+      margin: 0;
+      padding: 20px 16px 16px;
+      border-left: none;
+      border-top: 1px solid #282828;
+      /* Override slide direction: come up from bottom */
+      transform: translateY(100%);
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    #info-panel.visible {
+      transform: translateY(0);
+    }
+
+    /* Drag handle visual hint */
+    #info-panel::before {
+      content: '';
+      display: block;
+      width: 40px;
+      height: 4px;
+      background: #444;
+      border-radius: 2px;
+      margin: 0 auto 16px;
+    }
+
+    /* Shrink the hero image height */
+    .panel-artist-img {
+      height: 310px;
+    }
+
+    /* Larger close-button tap target */
+    .close-btn {
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      top: 12px;
+      right: 12px;
+    }
+
+    /* Tighter stat boxes */
+    .panel-stat-box {
+      padding: 12px;
+    }
+
+    .panel-stat-value {
+      font-size: 20px;
+    }
+
+    /* API banner: full-width at bottom */
+    #api-banner {
+      left: 0;
+      right: 0;
+      bottom: 0;
+      border-radius: 0;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+  }
+
+  /* Safe-area insets for modern iPhones */
+  @supports (padding-bottom: env(safe-area-inset-bottom)) {
+    @media (max-width: 600px) {
+      #info-panel {
+        padding-bottom: calc(32px + env(safe-area-inset-bottom));
+      }
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">Spotify Top 100 Artists</div>
+  </div>
+  <div class="search-wrap">
+    <input type="text" id="artist-search" placeholder="Search artist..." class="search-input" maxlength="80" autocomplete="off">
+    <button type="button" id="search-btn" class="search-btn">Go</button>
+  </div>
+</header>
+
+<div class="main-container">
+  <div id="map"></div>
+  
+  <div id="info-panel">
+    <div id="panel-loading">Loading…</div>
+    <button class="close-btn" onclick="closePanel()">×</button>
+    <div class="panel-hero">
+      <img id="p-artist-img" class="panel-artist-img" alt="" style="display: none;">
+      <div class="panel-hero-overlay" style="display:flex;flex-direction:row;align-items:center;gap:16px;">
+        <div>
+          <div class="panel-rank" id="p-rank"></div>
+          <div class="panel-name" id="p-name"></div>
+        </div>
+        <div id="p-flag" style="font-size:60px;line-height:1;"></div>
+      </div>
+    </div>
+    
+    <div class="panel-stats-row">
+      <div class="panel-stat-box">
+        <div class="panel-stat-value" id="p-listeners"></div>
+        <div class="panel-stat-label">Monthly Listeners</div>
+      </div>
+      <div class="panel-stat-box" id="p-grammy-box" style="display: none;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <img src="grammy.png" alt="Grammy" style="height:43px;width:auto;object-fit:contain;flex-shrink:0;">
+          <div>
+            <div class="panel-stat-value" id="p-grammy"></div>
+            <div class="panel-stat-label">GRAMMY Wins</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="desc-spotify-row">
+      <div class="panel-desc" id="p-desc"></div>
+
+      <a href="#" target="_blank" rel="noopener" class="spotify-btn" id="p-spotify">
+        <svg class="spotify-icon" viewBox="0 0 24 24">
+          <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.48.659.24 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.24 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.239.54-.959.72-1.56.3z"/>
+        </svg>
+        Listen on Spotify
+      </a>
+    </div>
+
+    
+    <div class="origin-nav-row">
+      <div>
+        <div class="panel-section-title">Origin</div>
+        <div class="panel-location">
+          <div>📍</div>
+          <div id="p-loc-text"></div>
+        </div>
+      </div>
+      <div class="nav-buttons">
+        <button class="nav-btn" onclick="goPrevArtist()" title="Previous Artist">
+          <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+        </button>
+        <button class="nav-btn" onclick="goNextArtist()" title="Next Artist">
+          <svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+// Inline Plus Code decoder (no CDN dependency – works when opening file locally)
+function decodePlusCode(code) {
+  if (!code || typeof code !== 'string' || code.indexOf('+') === -1) return null;
+  var ALPHA = '23456789CFGHJMPQRVWX', SEP = 8, PAIR_LEN = 10;
+  var PAIR_PREC = 8000, LAT_MAX = 90, LON_MAX = 180;
+  var PAIR_FIRST = 160000, GRID_ROWS = 5, GRID_COLS = 4;
+  var FINAL_LAT_PREC = PAIR_PREC * Math.pow(GRID_ROWS, 5);
+  var FINAL_LON_PREC = PAIR_PREC * Math.pow(GRID_COLS, 5);
+  code = code.replace('+', '').replace(/0/g, '').toUpperCase();
+  if (code.length < 10) return null;
+  var normalLat = -LAT_MAX * PAIR_PREC, normalLon = -LON_MAX * PAIR_PREC;
+  var gridLat = 0, gridLon = 0, pv = PAIR_FIRST, digits = Math.min(code.length, PAIR_LEN);
+  for (var i = 0; i < digits; i += 2) {
+    normalLat += ALPHA.indexOf(code.charAt(i)) * pv;
+    normalLon += ALPHA.indexOf(code.charAt(i + 1)) * pv;
+    if (i < digits - 2) pv /= 20;
+  }
+  var latPrec = pv / PAIR_PREC, lonPrec = pv / PAIR_PREC;
+  if (code.length > PAIR_LEN) {
+    var rowpv = 625, colpv = 256;
+    digits = Math.min(code.length, 15);
+    for (var i = PAIR_LEN; i < digits; i++) {
+      var v = ALPHA.indexOf(code.charAt(i)), row = Math.floor(v / GRID_COLS), col = v % GRID_COLS;
+      gridLat += row * rowpv; gridLon += col * colpv;
+      if (i < digits - 1) { rowpv /= GRID_ROWS; colpv /= GRID_COLS; }
+    }
+    latPrec = rowpv / FINAL_LAT_PREC; lonPrec = colpv / FINAL_LON_PREC;
+  }
+  var latLo = normalLat / PAIR_PREC + gridLat / FINAL_LAT_PREC;
+  var lonLo = normalLon / PAIR_PREC + gridLon / FINAL_LON_PREC;
+  return {
+    latitudeCenter: latLo + latPrec / 2,
+    longitudeCenter: lonLo + lonPrec / 2
+  };
+}
+</script>
+<script>
+const artists = [
+  {
+    "rank": 1,
+    "name": "Bruno Mars",
+    "listeners": "132.1M",
+    "type": "Solo",
+    "lat": 21.2765,
+    "lng": -157.8264,
+    "loc": "Waikiki neighborhood, Honolulu, Hawaii, U.S.",
+    "members": "Peter Gene Hernandez (born in Waikiki neighborhood, Honolulu, HI)",
+    "desc": "Global pop superstar known for retro-inspired hits and electrifying performances.",
+    "spotify_url": "https://open.spotify.com/artist/0du5cEVh5yTK9QJze8zA0C",
+    "grammy_wins": 16
+  },
+  {
+    "rank": 2,
+    "name": "Bad Bunny",
+    "listeners": "119.3M",
+    "type": "Solo",
+    "lat": 18.3984,
+    "lng": -66.1556,
+    "loc": "Bayamón, Puerto Rico",
+    "members": "Benito Antonio Martínez Ocasio (born in Bayamón, Puerto Rico)",
+    "desc": "Reggaeton trailblazer dominating global charts with Latin trap and urban sounds.",
+    "spotify_url": "https://open.spotify.com/artist/4q3ewBCX7sLwd24euuV69X",
+    "grammy_wins": 6
+  },
+  {
+    "rank": 3,
+    "name": "The Weeknd",
+    "listeners": "116.0M",
+    "type": "Solo",
+    "lat": 43.7722,
+    "lng": -79.2567,
+    "loc": "Scarborough neighborhood, Toronto, Ontario, Canada",
+    "members": "Abel Makkonen Tesfaye (born in Scarborough, Toronto, ON)",
+    "desc": "R&B innovator blending dark themes with mainstream pop success.",
+    "spotify_url": "https://open.spotify.com/artist/1Xyo4u8uXC1ZmMpatF05PJ",
+    "grammy_wins": 4
+  },
+  {
+    "rank": 4,
+    "name": "Rihanna",
+    "listeners": "106.8M",
+    "type": "Solo",
+    "lat": 13.0833,
+    "lng": -59.6,
+    "loc": "Saint Michael Parish, Barbados",
+    "members": "Robyn Rihanna Fenty (born in Saint Michael Parish, Barbados)",
+    "desc": "Barbadian icon and business mogul with record-breaking hits across genres.",
+    "spotify_url": "https://open.spotify.com/artist/5pKCCKE2ajJHZ9KAiaK11H",
+    "grammy_wins": 9
+  },
+  {
+    "rank": 5,
+    "name": "Taylor Swift",
+    "listeners": "104.3M",
+    "type": "Solo",
+    "lat": 40.330315,
+    "lng": -75.950553,
+    "loc": "Reading Hospital, Reading, Pennsylvania, U.S.",
+    "members": "Taylor Alison Swift (born at Reading Hospital, Reading, PA)",
+    "desc": "Country-to-pop superstar and storytelling master with massive cultural impact.",
+    "spotify_url": "https://open.spotify.com/artist/06HL4z0CvFAxyc27GXpf02",
+    "plus_code": "87G682JX+9H",
+    "grammy_wins": 14
+  },
+  {
+    "rank": 6,
+    "name": "Justin Bieber",
+    "listeners": "100.6M",
+    "type": "Solo",
+    "lat": 43.0006,
+    "lng": -81.2541,
+    "loc": "St. Joseph's Hospital, London, Ontario, Canada",
+    "members": "Justin Drew Bieber (born at St. Joseph's Hospital, London, ON)",
+    "desc": "Pop sensation who rose from YouTube to global stardom.",
+    "spotify_url": "https://open.spotify.com/artist/1uNFoZAHBGtllmzznpCI3s",
+    "plus_code": "86MW2P2W+93",
+    "grammy_wins": 2
+  },
+  {
+    "rank": 7,
+    "name": "Lady Gaga",
+    "listeners": "95.7M",
+    "type": "Solo",
+    "lat": 40.7736,
+    "lng": -73.9609,
+    "loc": "Lenox Hill Hospital, Manhattan, New York, U.S.",
+    "members": "Stefani Joanne Angelina Germanotta (born at Lenox Hill Hospital, Manhattan, NY)",
+    "desc": "Pop chameleon and performance artist with theatrical hits and activism.",
+    "spotify_url": "https://open.spotify.com/artist/1HY2Jd0NmPuamShAr6KMms",
+    "plus_code": "87G8Q2FQ+FM",
+    "grammy_wins": 16
+  },
+  {
+    "rank": 8,
+    "name": "Coldplay",
+    "listeners": "91.3M",
+    "type": "Group",
+    "lat": 51.52255,
+    "lng": -0.13855,
+    "loc": "Formed at Ramsay Hall, University College London, England",
+    "members": "Chris Martin (born Royal Devon and Exeter Hospital, Exeter), Jonny Buckland (born Islington, London), Guy Berryman (born Kirkcaldy, Scotland), Will Champion (born Southampton, Hampshire)",
+    "desc": "Formed at Ramsay Hall, University College London; one of the best-selling bands of all time.",
+    "spotify_url": "https://open.spotify.com/artist/4gzpq5DPGxSnKTe4SA8HAU",
+    "grammy_wins": 7
+  },
+  {
+    "rank": 9,
+    "name": "Drake",
+    "listeners": "87.5M",
+    "type": "Solo",
+    "lat": 43.6532,
+    "lng": -79.3832,
+    "loc": "Toronto, Ontario, Canada",
+    "members": "Aubrey Drake Graham (born in Toronto, ON)",
+    "desc": "Canadian rap and R&B powerhouse with record-breaking streaming dominance.",
+    "spotify_url": "https://open.spotify.com/artist/3TVXtAsR1Inumwj472S9r4",
+    "grammy_wins": 5
+  },
+  {
+    "rank": 10,
+    "name": "Billie Eilish",
+    "listeners": "87.5M",
+    "type": "Solo",
+    "lat": 34.0522,
+    "lng": -118.2437,
+    "loc": "Los Angeles, California, U.S.",
+    "members": "Billie Eilish Pirate Baird O'Connell (born in Los Angeles, CA)",
+    "desc": "Gen-Z icon with whisper-pop style and multiple Grammy wins.",
+    "spotify_url": "https://open.spotify.com/artist/6qqNVTkY8uBg9cP3Jd7DAH",
+    "grammy_wins": 10
+  },
+  {
+    "rank": 11,
+    "name": "Ed Sheeran",
+    "listeners": "83.5M",
+    "type": "Solo",
+    "lat": 52.0525,
+    "lng": 0.7195,
+    "loc": "Ipswich, Suffolk, England",
+    "members": "Edward Christopher Sheeran (born in Ipswich, Suffolk)",
+    "desc": "Singer-songwriter with acoustic hits and massive global streams.",
+    "spotify_url": "https://open.spotify.com/artist/6eUKZXaKkcviH0Ku9w2n3V",
+    "grammy_wins": 4
+  },
+  {
+    "rank": 12,
+    "name": "Ariana Grande",
+    "listeners": "82.8M",
+    "type": "Solo",
+    "lat": 40.77,
+    "lng": -73.9876,
+    "loc": "Mount Sinai West Hospital, Manhattan, New York, U.S.",
+    "members": "Ariana Grande-Butera (born at Mount Sinai West Hospital, Manhattan, NY)",
+    "desc": "Vocal powerhouse blending pop and R&B with Broadway roots.",
+    "spotify_url": "https://open.spotify.com/artist/66CXWjxzNUsdJxJ2JdwvnR",
+    "plus_code": "87G8Q297+W4",
+    "grammy_wins": 3
+  },
+  {
+    "rank": 13,
+    "name": "J Balvin",
+    "listeners": "81.8M",
+    "type": "Solo",
+    "lat": 4.6097,
+    "lng": -74.0817,
+    "loc": "Medellín, Colombia",
+    "members": "José Álvaro Osorio Balvín (born in Medellín, Colombia)",
+    "desc": "Reggaeton king bridging Latin music to worldwide audiences.",
+    "spotify_url": "https://open.spotify.com/artist/1vyhD5VmyZ7KMfW5gqLgo5",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 14,
+    "name": "David Guetta",
+    "listeners": "80.5M",
+    "type": "Solo",
+    "lat": 48.8617,
+    "lng": 2.3472,
+    "loc": "Paris (Les Halles area), France",
+    "members": "David Pierre Guetta (born in Paris, France)",
+    "desc": "EDM pioneer and producer behind countless club anthems.",
+    "spotify_url": "https://open.spotify.com/artist/1Cs0zKBU1kc0i8ypK3B9ai",
+    "grammy_wins": 2
+  },
+  {
+    "rank": 15,
+    "name": "Shakira",
+    "listeners": "78.3M",
+    "type": "Solo",
+    "lat": 10.391,
+    "lng": -75.4794,
+    "loc": "Barranquilla, Colombia",
+    "members": "Shakira Isabel Mebarak Ripoll (born in Barranquilla, Colombia)",
+    "desc": "Colombian superstar fusing Latin, pop, and rock with dance hits.",
+    "spotify_url": "https://open.spotify.com/artist/0EmeFodog0BfCgMzAIvKQp",
+    "grammy_wins": 3
+  },
+  {
+    "rank": 16,
+    "name": "Kendrick Lamar",
+    "listeners": "75.1M",
+    "type": "Solo",
+    "lat": 33.9535,
+    "lng": -118.211,
+    "loc": "Compton, California, U.S.",
+    "members": "Kendrick Lamar Duckworth (born in Compton, CA)",
+    "desc": "Hip-hop lyricist and Pulitzer winner with socially conscious anthems.",
+    "spotify_url": "https://open.spotify.com/artist/2YZyLoL8N0Wb9xBt1NhZWg",
+    "grammy_wins": 27
+  },
+  {
+    "rank": 17,
+    "name": "Maroon 5",
+    "listeners": "72.4M",
+    "type": "Group",
+    "lat": 34.061157,
+    "lng": -118.475597,
+    "loc": "Formed at Brentwood School, Los Angeles, California, U.S.",
+    "members": "Adam Levine (born in Los Angeles, CA), Jesse Carmichael (born in Los Angeles, CA), Mickey Madden (born in Austin, TX), Ryan Dusick (born in Los Angeles, CA)",
+    "desc": "Formed at Brentwood School in Los Angeles; pop-rock band with funk influences.",
+    "spotify_url": "https://open.spotify.com/artist/04gDigrS5kc9YWfZHwBETP",
+    "grammy_wins": 3
+  },
+  {
+    "rank": 18,
+    "name": "Eminem",
+    "listeners": "70.8M",
+    "type": "Solo",
+    "lat": 39.7686,
+    "lng": -94.8466,
+    "loc": "St. Joseph, Missouri, U.S.",
+    "members": "Marshall Bruce Mathers III (born in St. Joseph, MO; raised in Detroit, MI)",
+    "desc": "Rap legend and lyrical genius with controversial, chart-topping career.",
+    "spotify_url": "https://open.spotify.com/artist/7dGJo4pcD2V6oG8kP0tJRR",
+    "grammy_wins": 15
+  },
+  {
+    "rank": 19,
+    "name": "Calvin Harris",
+    "listeners": "68.9M",
+    "type": "Solo",
+    "lat": 55.9533,
+    "lng": -3.1883,
+    "loc": "Dumfries, Scotland",
+    "members": "Adam Richard Wiles (born in Dumfries, Scotland)",
+    "desc": "Scottish DJ and producer dominating dance and pop charts.",
+    "spotify_url": "https://open.spotify.com/artist/7CajNmpbOovFoOoasH2HaY",
+    "grammy_wins": 1
+  },
+  {
+    "rank": 20,
+    "name": "SZA",
+    "listeners": "67.2M",
+    "type": "Solo",
+    "lat": 38.627,
+    "lng": -90.1994,
+    "loc": "St. Louis, Missouri, U.S. (raised in Maplewood, NJ)",
+    "members": "Solána Imani Rowe (born in St. Louis, MO)",
+    "desc": "R&B singer with introspective lyrics and massive streaming success.",
+    "spotify_url": "https://open.spotify.com/artist/7tYKF4w9nC0nq9CsPZTHyP",
+    "grammy_wins": 5
+  },
+  {
+    "rank": 21,
+    "name": "Kanye West",
+    "listeners": "72.3M",
+    "type": "Solo",
+    "lat": 33.7522,
+    "lng": -84.3824,
+    "loc": "Grady Memorial Hospital, Atlanta, Georgia, USA",
+    "members": "Kanye Omari West (born at Grady Memorial Hospital, Atlanta, GA)",
+    "desc": "Innovative rapper, producer, and fashion designer known for Yeezy and multiple Grammy wins.",
+    "spotify_url": "https://open.spotify.com/artist/5K4W6rqBFWDnAN6FQUkS6x",
+    "plus_code": "865QQJ29+P5",
+    "grammy_wins": 24
+  },
+  {
+    "rank": 22,
+    "name": "Pitbull",
+    "listeners": "68.9M",
+    "type": "Solo",
+    "lat": 25.7731,
+    "lng": -80.2231,
+    "loc": "Little Havana neighborhood, Miami, Florida, USA",
+    "members": "Armando Christian Pérez (born in Little Havana, Miami, FL)",
+    "desc": "Mr. Worldwide, Cuban-American rapper famous for party anthems and global hits.",
+    "spotify_url": "https://open.spotify.com/artist/0TnOYISbd1XYRBk9myaseg",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 23,
+    "name": "Dua Lipa",
+    "listeners": "85.1M",
+    "type": "Solo",
+    "lat": 51.5514,
+    "lng": -0.1858,
+    "loc": "West Hampstead, London, England",
+    "members": "Dua Lipa (born in West Hampstead, London, England)",
+    "desc": "British-Albanian pop star with disco-infused hits like Levitating.",
+    "spotify_url": "https://open.spotify.com/artist/6M2wZ9GZgrQXHCFfjv46we",
+    "grammy_wins": 3
+  },
+  {
+    "rank": 24,
+    "name": "Lana Del Rey",
+    "listeners": "78.4M",
+    "type": "Solo",
+    "lat": 40.7736,
+    "lng": -73.9609,
+    "loc": "Lenox Hill Hospital, Upper East Side, Manhattan, New York, USA",
+    "members": "Elizabeth Woolridge Grant (born at Lenox Hill Hospital, Manhattan, NY)",
+    "desc": "Dreamy alt-pop icon known for cinematic storytelling and vintage aesthetics.",
+    "spotify_url": "https://open.spotify.com/artist/00FQb4jTyendYWaN8pK0wa",
+    "plus_code": "87G8Q2FQ+FM",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 25,
+    "name": "Zara Larsson",
+    "listeners": "55.7M",
+    "type": "Solo",
+    "lat": 59.35222,
+    "lng": 18.03222,
+    "loc": "Karolinska University Hospital, Solna, Stockholm County, Sweden",
+    "members": "Zara Maria Larsson (born at Karolinska University Hospital, Solna, Sweden)",
+    "desc": "Swedish pop sensation who rose to fame winning Talang and global hits like Lush Life.",
+    "spotify_url": "https://open.spotify.com/artist/1Xylc3o4UrD53lo9CvFvVg",
+    "plus_code": "9FFW922J+VV",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 26,
+    "name": "Daddy Yankee",
+    "listeners": "62.8M",
+    "type": "Solo",
+    "lat": 18.39,
+    "lng": -66.05,
+    "loc": "Río Piedras district, San Juan, Puerto Rico",
+    "members": "Ramón Luis Ayala Rodríguez (born in Río Piedras district, San Juan, PR)",
+    "desc": "King of Reggaeton, pioneer behind Gasolina and Despacito.",
+    "spotify_url": "https://open.spotify.com/artist/4VMYDCV2IEDYJArk749S6m",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 27,
+    "name": "Sabrina Carpenter",
+    "listeners": "92.6M",
+    "type": "Solo",
+    "lat": 40.44056,
+    "lng": -75.34056,
+    "loc": "Quakertown Hospital, Quakertown, Pennsylvania, USA",
+    "members": "Sabrina Annlynn Carpenter (born at Quakertown Hospital, Quakertown, PA)",
+    "desc": "Rising pop star and actress with viral hits like Espresso and Short n' Sweet.",
+    "spotify_url": "https://open.spotify.com/artist/74KM79TiuVKeVCqs8QtB0B",
+    "plus_code": "87G6CMQ2+7C",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 28,
+    "name": "Harry Styles",
+    "listeners": "81.2M",
+    "type": "Solo",
+    "lat": 52.28,
+    "lng": -1.9127,
+    "loc": "Alexandra Hospital, Redditch, Worcestershire, England",
+    "members": "Harry Edward Styles (born at Alexandra Hospital, Redditch, England)",
+    "desc": "Former One Direction member turned solo superstar with Grammy-winning albums.",
+    "spotify_url": "https://open.spotify.com/artist/6KImCVD70vtIoJWnq6nGn3",
+    "plus_code": "9C4W73JP+3R",
+    "grammy_wins": 3
+  },
+  {
+    "rank": 29,
+    "name": "Katy Perry",
+    "listeners": "74.5M",
+    "type": "Solo",
+    "lat": 34.4345,
+    "lng": -119.8278,
+    "loc": "Goleta Valley Cottage Hospital, Santa Barbara, California, USA",
+    "members": "Katheryn Elizabeth Hudson (born at Goleta Valley Cottage Hospital, Santa Barbara, CA)",
+    "desc": "Pop princess known for colorful anthems and Super Bowl halftime shows.",
+    "spotify_url": "https://open.spotify.com/artist/6jJ0s89eD6GaHleKKya26X",
+    "plus_code": "8562C5MQ+7V",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 30,
+    "name": "Sia",
+    "listeners": "58.9M",
+    "type": "Solo",
+    "lat": -34.907,
+    "lng": 138.5907,
+    "loc": "North Adelaide, Adelaide, South Australia, Australia",
+    "members": "Sia Kate Isobelle Furler (born in North Adelaide, Adelaide, Australia)",
+    "desc": "Australian singer-songwriter famous for Chandelier and powerhouse vocals.",
+    "spotify_url": "https://open.spotify.com/artist/5WUlDfRSoLAfcVSX1WnrxN",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 31,
+    "name": "Post Malone",
+    "listeners": "67.8M",
+    "type": "Solo",
+    "lat": 43.0481,
+    "lng": -76.1474,
+    "loc": "Syracuse, New York, USA",
+    "members": "Austin Richard Post (born in Syracuse, NY)",
+    "desc": "Genre-blending rapper and singer with hits like Circles and Sunflower.",
+    "spotify_url": "https://open.spotify.com/artist/246dkjvS1zLTtiykXe5h60",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 32,
+    "name": "Michael Jackson",
+    "listeners": "55.2M",
+    "type": "Solo",
+    "lat": 41.6008,
+    "lng": -87.3494,
+    "loc": "St. Mary's Mercy Hospital (549 Tyler St) (closed 1995), Gary, Indiana, USA",
+    "members": "Michael Joseph Jackson (born at St. Mary's Mercy Hospital, Gary, IN)",
+    "desc": "King of Pop, legendary performer and best-selling artist of all time.",
+    "spotify_url": "https://open.spotify.com/artist/3fMbdgg4jU18AjLCKBhRSm",
+    "grammy_wins": 13
+  },
+  {
+    "rank": 33,
+    "name": "Olivia Dean",
+    "listeners": "12.4M",
+    "type": "Solo",
+    "lat": 51.5814,
+    "lng": -0.0235,
+    "loc": "Walthamstow, London, England",
+    "members": "Olivia Lauryn Dean (born in Walthamstow, London, England)",
+    "desc": "British soul singer with Grammy-nominated debut and retro vibes.",
+    "spotify_url": "https://open.spotify.com/artist/00x1fYSGhdqScXBRpSj3DW",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 34,
+    "name": "sombr",
+    "listeners": "8.7M",
+    "type": "Solo",
+    "lat": 40.7198,
+    "lng": -73.9893,
+    "loc": "Lower East Side, New York City, USA",
+    "members": "Shane Michael Boose (born in Lower East Side, New York City)",
+    "desc": "Rising indie-rock singer-songwriter with viral emotional tracks.",
+    "spotify_url": "https://open.spotify.com/artist/4G9NDjRyZFDlJKMRL8hx3S",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 35,
+    "name": "Travis Scott",
+    "listeners": "69.3M",
+    "type": "Solo",
+    "lat": 29.65,
+    "lng": -95.36,
+    "loc": "South Park neighborhood, Houston, Texas, USA",
+    "members": "Jacques Berman Webster II (born in South Park, Houston, TX)",
+    "desc": "Trap icon and Astroworld creator known for high-energy performances.",
+    "spotify_url": "https://open.spotify.com/artist/0Y5tJX1MQlPlqiwlOH1tJY",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 36,
+    "name": "Chris Brown",
+    "listeners": "64.1M",
+    "type": "Solo",
+    "lat": 37.9276,
+    "lng": -76.859,
+    "loc": "Tappahannock, Virginia, USA",
+    "members": "Christopher Maurice Brown (born in Tappahannock, VA)",
+    "desc": "R&B superstar and dancer with hits like Forever and No Guidance.",
+    "spotify_url": "https://open.spotify.com/artist/7bXgB6jMjp9ATFy66eO08Z",
+    "grammy_wins": 1
+  },
+  {
+    "rank": 37,
+    "name": "Sean Paul",
+    "listeners": "51.6M",
+    "type": "Solo",
+    "lat": 18.0179,
+    "lng": -76.8099,
+    "loc": "Kingston, Jamaica",
+    "members": "Sean Paul Ryan Francis Henriques (born in Kingston, Jamaica)",
+    "desc": "Dancehall legend behind Temperature and Get Busy.",
+    "spotify_url": "https://open.spotify.com/artist/3Isy6kedDrgPYoTS1dazA9",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 38,
+    "name": "Rauw Alejandro",
+    "listeners": "59.8M",
+    "type": "Solo",
+    "lat": 18.4655,
+    "lng": -66.1057,
+    "loc": "San Juan, Puerto Rico",
+    "members": "Raúl Alejandro Ocasio Ruiz (born in San Juan, PR)",
+    "desc": "Puerto Rican reggaeton star with Latin Grammy wins.",
+    "spotify_url": "https://open.spotify.com/artist/1mcTU81TzQhprhouKaTkpq",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 39,
+    "name": "Adele",
+    "listeners": "85.7M",
+    "type": "Solo",
+    "lat": 51.6032,
+    "lng": -0.0678,
+    "loc": "Tottenham, London, England",
+    "members": "Adele Laurie Blue Adkins (born in Tottenham, London, England)",
+    "desc": "Powerhouse vocalist with record-breaking albums like 21 and 30.",
+    "spotify_url": "https://open.spotify.com/artist/4dpARuHxo51G3z768sgnrY",
+    "grammy_wins": 16
+  },
+  {
+    "rank": 40,
+    "name": "Black Eyed Peas",
+    "listeners": "64.2M",
+    "type": "Group",
+    "lat": 34.0232,
+    "lng": -118.172,
+    "loc": "Formed in East Los Angeles, California, USA",
+    "members": "will.i.am (born in Los Angeles, CA), apl.de.ap (born in the Philippines), Taboo (born in East Los Angeles, CA)",
+    "desc": "Hip-hop/pop group formed in East Los Angeles; known for global anthems like I Gotta Feeling.",
+    "spotify_url": "https://open.spotify.com/artist/1yxSLGMDHlW21z4YXirZDS",
+    "grammy_wins": 6
+  },
+  {
+    "rank": 41,
+    "name": "Doja Cat",
+    "listeners": "75.0M",
+    "type": "Solo",
+    "lat": 34.1725,
+    "lng": -118.5535,
+    "loc": "Tarzana neighborhood, Los Angeles, California, USA",
+    "members": "Amala Ratna Zandile Dlamini (born in the Tarzana neighborhood of Los Angeles, CA)",
+    "desc": "Rapper and singer known for hits like 'Say So' and 'Woman'.",
+    "spotify_url": "https://open.spotify.com/artist/5cj0lLjcoR7YOSnhnX0Po5",
+    "grammy_wins": 1
+  },
+  {
+    "rank": 42,
+    "name": "RAYE",
+    "listeners": "40.0M",
+    "type": "Solo",
+    "lat": 51.4305,
+    "lng": -0.1703,
+    "loc": "Tooting, London, England",
+    "members": "Rachel Agatha Keen (born in Tooting, London)",
+    "desc": "British singer-songwriter known for 'Escapism' and 'Prada'.",
+    "spotify_url": "https://open.spotify.com/artist/5KKpBU5eC2tJDzf0wmlRp2",
+    "grammy_wins": 2
+  },
+  {
+    "rank": 43,
+    "name": "Beyoncé",
+    "listeners": "80.0M",
+    "type": "Solo",
+    "lat": 29.72,
+    "lng": -95.38,
+    "loc": "Third Ward, Houston, Texas, USA",
+    "members": "Beyoncé Giselle Knowles-Carter (born in Third Ward, Houston, TX)",
+    "desc": "Global icon and Queen of R&B with hits like 'Crazy in Love' and 'Halo'.",
+    "spotify_url": "https://open.spotify.com/artist/6vWDO969PvNqNYHIOW5v0m",
+    "grammy_wins": 35
+  },
+  {
+    "rank": 44,
+    "name": "Arctic Monkeys",
+    "listeners": "50.0M",
+    "type": "Group",
+    "lat": 53.392,
+    "lng": -1.4747,
+    "loc": "Formed at Yellow Arch Studios, Neepsend, Sheffield, England",
+    "members": "Alex Turner (born High Green, Sheffield), Jamie Cook (born Sheffield), Matt Helders (born Sheffield), Andy Nicholson (born Sheffield)",
+    "desc": "Indie rock band known for 'Do I Wanna Know?' and '505'.",
+    "spotify_url": "https://open.spotify.com/artist/7Ln80lUS6He07XvHI8qqHH",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 45,
+    "name": "Future",
+    "listeners": "60.0M",
+    "type": "Solo",
+    "lat": 33.746,
+    "lng": -84.372,
+    "loc": "Kirkwood neighborhood, Atlanta, Georgia, USA",
+    "members": "Nayvadius DeMun Wilburn (born in Kirkwood, Atlanta, GA)",
+    "desc": "Trap rapper known for 'Mask Off' and 'Life Is Good'.",
+    "spotify_url": "https://open.spotify.com/artist/1RyvyyTE3xzB2ZywiAwp0i",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 46,
+    "name": "Linkin Park",
+    "listeners": "45.0M",
+    "type": "Group",
+    "lat": 34.150278,
+    "lng": -118.748611,
+    "loc": "Formed at Agoura High School, Agoura Hills, California, USA",
+    "members": "Mike Shinoda (born Agoura Hills, CA), Brad Delson (born Agoura Hills, CA), Rob Bourdon (born Calabasas, CA)",
+    "desc": "Nu-metal/rock band known for 'In the End' and 'Numb'.",
+    "spotify_url": "https://open.spotify.com/artist/6XyY86QOPPrYVGvF9ch6wz",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 47,
+    "name": "Miley Cyrus",
+    "listeners": "55.0M",
+    "type": "Solo",
+    "lat": 35.925,
+    "lng": -86.868,
+    "loc": "Franklin, Tennessee, USA",
+    "members": "Miley Cyrus (born in Franklin, TN)",
+    "desc": "Pop star and actress known for 'Wrecking Ball' and 'Flowers'.",
+    "spotify_url": "https://open.spotify.com/artist/5YGY8feqx7naU7z4HrwZM6",
+    "grammy_wins": 2
+  },
+  {
+    "rank": 48,
+    "name": "Imagine Dragons",
+    "listeners": "65.0M",
+    "type": "Group",
+    "lat": 40.2504,
+    "lng": -111.6429,
+    "loc": "Formed at Brigham Young University, Provo, Utah, USA",
+    "members": "Dan Reynolds (born Las Vegas, NV), Wayne Sermon (born American Fork, UT), Ben McKee (born Boise, ID), Daniel Platzman (born Atlanta, GA)",
+    "desc": "Pop rock band known for 'Radioactive' and 'Believer'.",
+    "spotify_url": "https://open.spotify.com/artist/53XhwfbYqKCa1cC15pYq2q",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 49,
+    "name": "Arijit Singh",
+    "listeners": "40.0M",
+    "type": "Solo",
+    "lat": 24.25,
+    "lng": 88.27,
+    "loc": "Jiaganj, Murshidabad, West Bengal, India",
+    "members": "Arijit Singh (born in Jiaganj, Murshidabad)",
+    "desc": "Bollywood playback singer known for romantic ballads like 'Tum Hi Ho'.",
+    "spotify_url": "https://open.spotify.com/artist/4YRxDV8wJFPHPTeXepOstw",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 50,
+    "name": "Alex Warren",
+    "listeners": "30.0M",
+    "type": "Solo",
+    "lat": 33.121,
+    "lng": -117.325,
+    "loc": "Carlsbad, California, USA",
+    "members": "Alex Warren (born in Carlsbad, CA)",
+    "desc": "Rising pop singer known for 'Carry You Home' and viral TikTok hits.",
+    "spotify_url": "https://open.spotify.com/artist/0fTSzq9jAh4c36UVb4V7CB",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 51,
+    "name": "KAROL G",
+    "listeners": "70.0M",
+    "type": "Solo",
+    "lat": 6.244,
+    "lng": -75.581,
+    "loc": "Medellín, Antioquia, Colombia",
+    "members": "Carolina Giraldo Navarro (born in Medellín, Colombia)",
+    "desc": "Reggaeton and Latin pop star known for 'TQG' and 'Amargura'.",
+    "spotify_url": "https://open.spotify.com/artist/790FomKkXshlbRYZFtlgla",
+    "grammy_wins": 1
+  },
+  {
+    "rank": 52,
+    "name": "Ozuna",
+    "listeners": "60.0M",
+    "type": "Solo",
+    "lat": 18.465,
+    "lng": -66.105,
+    "loc": "San Juan, Puerto Rico",
+    "members": "Juan Carlos Ozuna Rosado (born in San Juan, Puerto Rico)",
+    "desc": "Latin trap and reggaeton artist known for 'Taki Taki' and 'Caramelo'.",
+    "spotify_url": "https://open.spotify.com/artist/1i8SpTcr7yvPOmcqrbnVXY",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 53,
+    "name": "Shreya Ghoshal",
+    "listeners": "35.0M",
+    "type": "Solo",
+    "lat": 24.1,
+    "lng": 88.25,
+    "loc": "Berhampore, Murshidabad, West Bengal, India",
+    "members": "Shreya Ghoshal (born in Berhampore, Murshidabad)",
+    "desc": "Indian playback singer known for Bollywood hits like 'Sun Raha Hai'.",
+    "spotify_url": "https://open.spotify.com/artist/0oOet2f43PA68X5RxKobEy",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 54,
+    "name": "Sam Smith",
+    "listeners": "50.0M",
+    "type": "Solo",
+    "lat": 51.507,
+    "lng": -0.127,
+    "loc": "London, England",
+    "members": "Samuel Frederick Smith (born in London)",
+    "desc": "Soul singer known for 'Stay With Me' and 'Unholy'.",
+    "spotify_url": "https://open.spotify.com/artist/2wY79sveU1sp5g7SokKOiI",
+    "grammy_wins": 5
+  },
+  {
+    "rank": 55,
+    "name": "Queen",
+    "listeners": "40.0M",
+    "type": "Group",
+    "lat": 51.498356,
+    "lng": -0.176894,
+    "loc": "Formed at Imperial College London, England",
+    "members": "Freddie Mercury (born Stone Town, Zanzibar), Brian May (born Twickenham, Middlesex), Roger Taylor (born King's Lynn, Norfolk), John Deacon (born Oadby, Leicestershire)",
+    "desc": "Legendary rock band known for 'Bohemian Rhapsody' and 'We Will Rock You'.",
+    "spotify_url": "https://open.spotify.com/artist/1dfeR4HaWDbWqFHLkxsg1d",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 56,
+    "name": "Halsey",
+    "listeners": "45.0M",
+    "type": "Solo",
+    "lat": 40.518,
+    "lng": -74.412,
+    "loc": "Edison, New Jersey, USA",
+    "members": "Ashley Nicolette Frangipane (born in Edison, NJ)",
+    "desc": "Pop singer known for 'Without Me' and 'Closer'.",
+    "spotify_url": "https://open.spotify.com/artist/26VFTg2z8YR0cCuwLzESi2",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 57,
+    "name": "Khalid",
+    "listeners": "50.0M",
+    "type": "Solo",
+    "lat": 31.87216,
+    "lng": -81.60015,
+    "loc": "Winn Army Community Hospital, Fort Stewart, Georgia, USA",
+    "members": "Khalid (born at Winn Army Community Hospital, Fort Stewart, GA)",
+    "desc": "R&B singer known for 'Young Dumb & Broke' and 'Location'.",
+    "spotify_url": "https://open.spotify.com/artist/6LuN9FCkKOj5PcnpouEgny",
+    "plus_code": "863WV9CX+WW",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 58,
+    "name": "Djo",
+    "listeners": "30.0M",
+    "type": "Solo",
+    "lat": 42.81,
+    "lng": -70.87,
+    "loc": "Newburyport, Massachusetts, USA",
+    "members": "Joe Keery (born in Newburyport, MA)",
+    "desc": "Indie artist and actor known for 'End of Beginning'.",
+    "spotify_url": "https://open.spotify.com/artist/5p9HO3XC5P3BLxJs5Mtrhm",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 59,
+    "name": "Fleetwood Mac",
+    "listeners": "35.0M",
+    "type": "Group",
+    "lat": 51.507,
+    "lng": -0.127,
+    "loc": "Formed in London, England",
+    "members": "Peter Green (born Bethnal Green, London), Mick Fleetwood (born Redruth, Cornwall), Jeremy Spencer (born Hartlepool, County Durham), John McVie (born Ealing, West London)",
+    "desc": "Iconic rock band known for 'Rumours' and 'Go Your Own Way'.",
+    "spotify_url": "https://open.spotify.com/artist/08GQAI4eElDnROBrJRGE0X",
+    "grammy_wins": 1
+  },
+  {
+    "rank": 60,
+    "name": "Marshmello",
+    "listeners": "40.0M",
+    "type": "Solo",
+    "lat": 39.986,
+    "lng": -75.4,
+    "loc": "Newtown Square, Pennsylvania, USA",
+    "members": "Christopher Comstock (born in Newtown Square, PA)",
+    "desc": "DJ and producer known for 'Happier' and 'Alone'.",
+    "spotify_url": "https://open.spotify.com/artist/64KEffDW9EtZ1y2vBYgq8T",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 61,
+    "name": "Justin Timberlake",
+    "listeners": "58.4M",
+    "type": "Solo",
+    "lat": 35.1495,
+    "lng": -90.049,
+    "loc": "Memphis, Tennessee, U.S.",
+    "members": "Justin Timberlake (born in Memphis, Tennessee, U.S.)",
+    "desc": "American singer, songwriter, actor, and former member of NSYNC.",
+    "spotify_url": "https://open.spotify.com/artist/31TPClRtHm23RisEBtV3X7",
+    "grammy_wins": 10
+  },
+  {
+    "rank": 62,
+    "name": "DJ Snake",
+    "listeners": "38.7M",
+    "type": "Solo",
+    "lat": 48.9928,
+    "lng": 2.2589,
+    "loc": "Born Paris; raised in Ermont, Val-d'Oise, France",
+    "members": "DJ Snake (born in Paris, France)",
+    "desc": "French DJ and record producer known for global hits like 'Lean On'.",
+    "spotify_url": "https://open.spotify.com/artist/540vIaP2JwjQb9dm3aArA4",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 63,
+    "name": "The Chainsmokers",
+    "listeners": "37.2M",
+    "type": "Group",
+    "lat": 40.7425,
+    "lng": -73.9935,
+    "loc": "Formed in Chelsea, Manhattan, New York City, U.S.",
+    "members": "Alex Pall (born Westchester County, New York), Drew Taggart (born Freeport, Maine)",
+    "desc": "American electronic DJ and production duo known for 'Closer' and 'Don't Let Me Down'.",
+    "spotify_url": "https://open.spotify.com/artist/69GGBxA162lTqCwzJG5jLp",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 64,
+    "name": "Tate McRae",
+    "listeners": "52.6M",
+    "type": "Solo",
+    "lat": 51.0447,
+    "lng": -114.0719,
+    "loc": "Calgary, Alberta, Canada",
+    "members": "Tate McRae (born in Calgary, Alberta, Canada)",
+    "desc": "Canadian singer, songwriter, and dancer who rose with 'You Broke Me First'.",
+    "spotify_url": "https://open.spotify.com/artist/45dkTj5sMRSjrmBSBeiHym",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 65,
+    "name": "Ellie Goulding",
+    "listeners": "37.9M",
+    "type": "Solo",
+    "lat": 52.0567,
+    "lng": -2.716,
+    "loc": "Hereford, Herefordshire, England",
+    "members": "Ellie Goulding (born in Hereford, Herefordshire, England)",
+    "desc": "English singer-songwriter and activist known for 'Lights' and 'Love Me Like You Do'.",
+    "spotify_url": "https://open.spotify.com/artist/0X2BH1fck6amBIoJhDVmmJ",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 66,
+    "name": "Maluma",
+    "listeners": "48.5M",
+    "type": "Solo",
+    "lat": 6.2442,
+    "lng": -75.5812,
+    "loc": "Medellín, Antioquia Department, Colombia",
+    "members": "Maluma (born in Medellín, Antioquia Department, Colombia)",
+    "desc": "Colombian singer and songwriter blending reggaeton and Latin pop.",
+    "spotify_url": "https://open.spotify.com/artist/1r4hJ1h58CWwUQe3MxPuau",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 67,
+    "name": "Don Omar",
+    "listeners": "28.3M",
+    "type": "Solo",
+    "lat": 18.4407,
+    "lng": -66.03,
+    "loc": "Santurce neighborhood, San Juan, Puerto Rico",
+    "members": "Don Omar (born in Santurce neighborhood, San Juan, Puerto Rico)",
+    "desc": "Puerto Rican reggaeton legend known as the 'King of Reggaeton'.",
+    "spotify_url": "https://open.spotify.com/artist/33ScadVnbm2X8kkUqOkC6Z",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 68,
+    "name": "Olivia Rodrigo",
+    "listeners": "62.1M",
+    "type": "Solo",
+    "lat": 33.5539,
+    "lng": -117.1361,
+    "loc": "Rancho Springs Medical Center, Murrieta, California, U.S.",
+    "members": "Olivia Rodrigo (born at Rancho Springs Medical Center, Murrieta, California)",
+    "desc": "American singer-songwriter and actress who exploded with 'drivers license'.",
+    "spotify_url": "https://open.spotify.com/artist/1McMsnEElThX1knmY4oliG",
+    "grammy_wins": 3
+  },
+  {
+    "rank": 69,
+    "name": "Pritam",
+    "listeners": "18.9M",
+    "type": "Solo",
+    "lat": 22.5726,
+    "lng": 88.3639,
+    "loc": "Kolkata, West Bengal, India",
+    "members": "Pritam (born in Kolkata, West Bengal, India)",
+    "desc": "Indian composer and music director for over 125 Bollywood films.",
+    "spotify_url": "https://open.spotify.com/artist/1wRPtKGflJrBx9BmLsSwlU",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 70,
+    "name": "Lil Wayne",
+    "listeners": "41.5M",
+    "type": "Solo",
+    "lat": 29.96,
+    "lng": -90.12,
+    "loc": "Hollygrove neighborhood of Uptown New Orleans, Louisiana, U.S.",
+    "members": "Lil Wayne (born in Hollygrove neighborhood of Uptown New Orleans, Louisiana)",
+    "desc": "American rapper and one of the most influential hip-hop artists of his generation.",
+    "spotify_url": "https://open.spotify.com/artist/55Aa2cqylxrFIXC767Z865",
+    "grammy_wins": 5
+  },
+  {
+    "rank": 71,
+    "name": "A.R. Rahman",
+    "listeners": "26.7M",
+    "type": "Solo",
+    "lat": 13.04,
+    "lng": 80.23,
+    "loc": "Kodambakkam, Chennai, Tamil Nadu, India",
+    "members": "A.R. Rahman (born in Kodambakkam, Chennai, Tamil Nadu, India)",
+    "desc": "Indian composer and singer renowned for his work in Tamil and Hindi cinema.",
+    "spotify_url": "https://open.spotify.com/artist/1mYsTxnqsietFxj1OgoGbG",
+    "grammy_wins": 2
+  },
+  {
+    "rank": 72,
+    "name": "Elton John",
+    "listeners": "36.8M",
+    "type": "Solo",
+    "lat": 51.592,
+    "lng": -0.38,
+    "loc": "Pinner, London Borough of Harrow, England",
+    "members": "Elton John (born in Pinner, London Borough of Harrow, England)",
+    "desc": "British singer, songwriter, and pianist with one of the most successful songwriting partnerships in history.",
+    "spotify_url": "https://open.spotify.com/artist/3PhoLpVuITZKcymswpck5b",
+    "grammy_wins": 5
+  },
+  {
+    "rank": 73,
+    "name": "Don Toliver",
+    "listeners": "42.3M",
+    "type": "Solo",
+    "lat": 29.7604,
+    "lng": -95.3698,
+    "loc": "Houston, Texas, U.S.",
+    "members": "Don Toliver (born in Houston, Texas, U.S.)",
+    "desc": "American rapper and singer known for trap music and collaborations with Travis Scott.",
+    "spotify_url": "https://open.spotify.com/artist/4Gso3d4CscCijv0lmajZWs",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 74,
+    "name": "Britney Spears",
+    "listeners": "49.2M",
+    "type": "Solo",
+    "lat": 31.2432,
+    "lng": -90.4532,
+    "loc": "McComb, Mississippi, U.S.",
+    "members": "Britney Spears (born in McComb, Mississippi, U.S.)",
+    "desc": "American singer known as the 'Princess of Pop' and a cultural icon of the 21st century.",
+    "spotify_url": "https://open.spotify.com/artist/26dSoYclwsYLMAKD3tpOr4",
+    "grammy_wins": 1
+  },
+  {
+    "rank": 75,
+    "name": "The Neighbourhood",
+    "listeners": "16.8M",
+    "type": "Group",
+    "lat": 34.1808,
+    "lng": -118.9101,
+    "loc": "Formed in Newbury Park, California, U.S.",
+    "members": "Jesse Rutherford (born Thousand Oaks, California), Zach Abels (born Simi Valley, California), Jeremy Freedman (born Simi Valley, California), Mikey Margott (born California), Bryan Sammis (born Oak Park, California)",
+    "desc": "American alternative rock band known for 'Sweater Weather'.",
+    "spotify_url": "https://open.spotify.com/artist/77SW9BnxLY8rJ0RciFqkHh",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 76,
+    "name": "USHER",
+    "listeners": "47.9M",
+    "type": "Solo",
+    "lat": 32.7767,
+    "lng": -96.797,
+    "loc": "Dallas, Texas, U.S.",
+    "members": "USHER (born in Dallas, Texas, U.S.)",
+    "desc": "American singer, songwriter, and dancer recognized as an influential figure in contemporary R&B.",
+    "spotify_url": "https://open.spotify.com/artist/23zg3TcAtWQy7J6upgbUnj",
+    "grammy_wins": 8
+  },
+  {
+    "rank": 77,
+    "name": "Charlie Puth",
+    "listeners": "51.4M",
+    "type": "Solo",
+    "lat": 40.3568,
+    "lng": -73.983,
+    "loc": "Rumson, New Jersey, U.S.",
+    "members": "Charlie Puth (born in Rumson, New Jersey, U.S.)",
+    "desc": "American singer-songwriter who gained fame through YouTube covers.",
+    "spotify_url": "https://open.spotify.com/artist/6VuMaDnrHyPL1p4EHjYLi7",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 78,
+    "name": "Ne-Yo",
+    "listeners": "32.6M",
+    "type": "Solo",
+    "lat": 33.584,
+    "lng": -92.3649,
+    "loc": "Camden, Arkansas, U.S.",
+    "members": "Ne-Yo (born in Camden, Arkansas, U.S.)",
+    "desc": "American singer, songwriter, and record producer prominent in 2000s R&B.",
+    "spotify_url": "https://open.spotify.com/artist/21E3waRsmPlU7jZsS13rcj",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 79,
+    "name": "Tame Impala",
+    "listeners": "32.1M",
+    "type": "Solo",
+    "lat": -31.9505,
+    "lng": 115.8605,
+    "loc": "Perth, Western Australia, Australia",
+    "members": "Kevin Parker (born Sydney, New South Wales; project based in Perth)",
+    "desc": "Psychedelic music project of Australian multi-instrumentalist Kevin Parker.",
+    "spotify_url": "https://open.spotify.com/artist/5INjqkS1o8h1imAzPqGZBb",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 80,
+    "name": "Red Hot Chili Peppers",
+    "listeners": "37.5M",
+    "type": "Group",
+    "lat": 34.082,
+    "lng": -118.36,
+    "loc": "Formed at Fairfax High School, Los Angeles, California, U.S.",
+    "members": "Anthony Kiedis (born Grand Rapids, Michigan), Flea (born Melbourne, Victoria, Australia), Hillel Slovak (born Haifa, Israel), Jack Irons (born Los Angeles, California)",
+    "desc": "American rock band and one of the best-selling acts of all time.",
+    "spotify_url": "https://open.spotify.com/artist/0L8ExT028jH3ddEcZwqJJ5",
+    "grammy_wins": 6
+  },
+  {
+    "rank": 81,
+    "name": "Peso Pluma",
+    "listeners": "45.2M",
+    "type": "Solo",
+    "lat": 20.727859,
+    "lng": -103.404007,
+    "loc": "Zapopan, Jalisco, Mexico",
+    "members": "Peso Pluma (born in Zapopan, Jalisco, Mexico)",
+    "desc": "Mexican singer pioneering the corridos tumbados genre with global hits.",
+    "spotify_url": "https://open.spotify.com/artist/12GqGscKJx3aE4t07u7eVZ",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 82,
+    "name": "OneRepublic",
+    "listeners": "45.2M",
+    "type": "Group",
+    "lat": 38.89738,
+    "lng": -104.81136,
+    "loc": "Formed at Colorado Springs Christian High School, Colorado Springs, Colorado, USA",
+    "members": "Ryan Tedder (born Colorado Springs, Colorado), Zach Filkins (born Chicago, Illinois), Drew Brown, Brent Kutzle, Eddie Fisher (born in the US)",
+    "desc": "American pop rock band formed at high school; known for anthems like Counting Stars.",
+    "spotify_url": "https://open.spotify.com/artist/5Pwc4xIPtQLFEnJriah9YJ",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 83,
+    "name": "50 Cent",
+    "listeners": "45.3M",
+    "type": "Solo",
+    "lat": 40.699783,
+    "lng": -73.786026,
+    "loc": "South Jamaica neighborhood, Queens, New York, USA",
+    "members": "50 Cent (born in Queens, raised in South Jamaica neighborhood)",
+    "desc": "Iconic rapper and entrepreneur who rose from the streets of Queens.",
+    "spotify_url": "https://open.spotify.com/artist/3q7HBObVc0L8jNeTe5Gofh",
+    "grammy_wins": 1
+  },
+  {
+    "rank": 84,
+    "name": "Fuerza Regida",
+    "listeners": "44.8M",
+    "type": "Group",
+    "lat": 34.115784,
+    "lng": -117.302399,
+    "loc": "Formed in San Bernardino, California, USA",
+    "members": "Jesús Ortíz Paz, Samuel Jáimez, Khrystian Ramos, José García (born in San Bernardino, California area)",
+    "desc": "Regional Mexican band blending corridos tumbados with trap; hometown heroes.",
+    "spotify_url": "https://open.spotify.com/artist/0ys2OFYzWYB5hRDLCsBqxt",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 85,
+    "name": "Farruko",
+    "listeners": "44.5M",
+    "type": "Solo",
+    "lat": 18.39856,
+    "lng": -66.15572,
+    "loc": "Bayamón, Puerto Rico",
+    "members": "Farruko (born in Bayamón, Puerto Rico)",
+    "desc": "Puerto Rican reggaeton and Latin trap star with massive crossover appeal.",
+    "spotify_url": "https://open.spotify.com/artist/329e4yvIujISKGKz1BZZbO",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 86,
+    "name": "Anuel AA",
+    "listeners": "44.5M",
+    "type": "Solo",
+    "lat": 18.380102,
+    "lng": -65.961975,
+    "loc": "Carolina, Puerto Rico",
+    "members": "Anuel AA (born in Carolina, Puerto Rico)",
+    "desc": "Latin trap pioneer and global reggaeton superstar from Puerto Rico.",
+    "spotify_url": "https://open.spotify.com/artist/2R21vXR83lH98kGeO99Y66",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 87,
+    "name": "Wiz Khalifa",
+    "listeners": "44.4M",
+    "type": "Solo",
+    "lat": 48.230164,
+    "lng": -101.291199,
+    "loc": "Minot, North Dakota, USA",
+    "members": "Wiz Khalifa (born in Minot, North Dakota)",
+    "desc": "Rapper and cannabis advocate known for See You Again and party anthems.",
+    "spotify_url": "https://open.spotify.com/artist/137W8MRPWKqSmrBGDBFSop",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 88,
+    "name": "JENNIE",
+    "listeners": "44.3M",
+    "type": "Solo",
+    "lat": 37.382698,
+    "lng": 127.118904,
+    "loc": "Bundang District, Seongnam, South Korea",
+    "members": "JENNIE (born in Bundang District, Seongnam)",
+    "desc": "BLACKPINK member and solo K-pop/global pop icon with solo hits.",
+    "spotify_url": "https://open.spotify.com/artist/250b0Wlc5Vk0CoUsaCY84M",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 89,
+    "name": "Radiohead",
+    "listeners": "44.1M",
+    "type": "Group",
+    "lat": 51.673,
+    "lng": -1.288,
+    "loc": "Formed at Abingdon School, Abingdon, Oxfordshire, England",
+    "members": "Thom Yorke, Jonny Greenwood, Ed O'Brien, Philip Selway, Colin Greenwood (all born/meet in Abingdon area)",
+    "desc": "Influential alternative rock band known for innovative albums like OK Computer.",
+    "spotify_url": "https://open.spotify.com/artist/4Z8W4fKeB5YxbusRsdQVPb",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 90,
+    "name": "Nicki Minaj",
+    "listeners": "43.9M",
+    "type": "Solo",
+    "lat": 10.671067,
+    "lng": -61.521206,
+    "loc": "Saint James district, Port of Spain, Trinidad and Tobago",
+    "members": "Nicki Minaj (born in Saint James district, Port of Spain)",
+    "desc": "Queen of Rap with record-breaking hits and fearless persona.",
+    "spotify_url": "https://open.spotify.com/artist/0hCNtLu0JehylgoiP8L4Gh",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 91,
+    "name": "Shawn Mendes",
+    "listeners": "43.9M",
+    "type": "Solo",
+    "lat": 43.65107,
+    "lng": -79.347015,
+    "loc": "Toronto, Ontario, Canada",
+    "members": "Shawn Mendes (born in Toronto, Ontario)",
+    "desc": "Canadian pop sensation with heartfelt ballads and stadium tours.",
+    "spotify_url": "https://open.spotify.com/artist/7n2wHs1TKAczGzO7Dd2rGr",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 92,
+    "name": "One Direction",
+    "listeners": "43.3M",
+    "type": "Group",
+    "lat": 51.55806,
+    "lng": -0.28306,
+    "loc": "Formed in Wembley, London, England (on The X Factor at Wembley Arena bootcamp, 2010)",
+    "members": "Niall Horan (born Mullingar, Ireland), Liam Payne (born Wolverhampton, England), Harry Styles (born Holmes Chapel, England), Louis Tomlinson (born Doncaster, England), Zayn Malik (born Bradford, England)",
+    "desc": "Global boy band phenomenon that redefined pop in the 2010s.",
+    "spotify_url": "https://open.spotify.com/artist/4AK6F7OLvEQ5QYCBNiQWHq",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 93,
+    "name": "Playboi Carti",
+    "listeners": "43.1M",
+    "type": "Solo",
+    "lat": 33.5726,
+    "lng": -84.4133,
+    "loc": "Riverdale, Georgia, USA (born and raised; metro Atlanta)",
+    "members": "Playboi Carti (born in Atlanta, grew up in Riverdale)",
+    "desc": "Atlanta rapper and fashion icon known for experimental trap and rage sound.",
+    "spotify_url": "https://open.spotify.com/artist/699OTQXzgjhIYAHMy9RyPD",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 94,
+    "name": "Benson Boone",
+    "listeners": "43.1M",
+    "type": "Solo",
+    "lat": 47.8554,
+    "lng": -121.971,
+    "loc": "Monroe, Washington, USA",
+    "members": "Benson Boone (born in Monroe, Washington)",
+    "desc": "Rising pop-rock singer with viral hits like Beautiful Things.",
+    "spotify_url": "https://open.spotify.com/artist/22wbnEMDvgVIAGdFeek6ET",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 95,
+    "name": "Camila Cabello",
+    "listeners": "43.1M",
+    "type": "Solo",
+    "lat": 23.162562,
+    "lng": -82.300416,
+    "loc": "Cojímar, Habana del Este, Havana, Cuba",
+    "members": "Camila Cabello (born in Cojímar, Habana del Este)",
+    "desc": "Cuban-American pop star and former Fifth Harmony member.",
+    "spotify_url": "https://open.spotify.com/artist/4nDoRrQiYLoBzwC5BhVJzF",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 96,
+    "name": "A$AP Rocky",
+    "listeners": "42.8M",
+    "type": "Solo",
+    "lat": 40.816357,
+    "lng": -73.962898,
+    "loc": "Harlem neighborhood, Manhattan, New York, USA",
+    "members": "A$AP Rocky (born in Harlem, Manhattan)",
+    "desc": "Harlem rapper, fashion icon, and A$AP Mob leader.",
+    "spotify_url": "https://open.spotify.com/artist/13ubrt8QOOCPljQ2FL1Kca",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 97,
+    "name": "Madonna",
+    "listeners": "42.9M",
+    "type": "Solo",
+    "lat": 43.58639,
+    "lng": -83.89278,
+    "loc": "Mercy Hospital (15th and Water St) (closed 1977), Bay City, Michigan, USA",
+    "members": "Madonna (born at Mercy Hospital, Bay City)",
+    "desc": "Queen of Pop and one of the best-selling artists of all time.",
+    "spotify_url": "https://open.spotify.com/artist/6tbjWDEIzxoDsBA1FuhfPW",
+    "grammy_wins": 7
+  },
+  {
+    "rank": 98,
+    "name": "Gorillaz",
+    "listeners": "43.0M",
+    "type": "Group",
+    "lat": 51.509865,
+    "lng": -0.118092,
+    "loc": "Created in London, England",
+    "members": "Damon Albarn (born London, England), Jamie Hewlett (born London, England)",
+    "desc": "Virtual band blending hip-hop, rock, and electronic; created by Damon Albarn and Jamie Hewlett.",
+    "spotify_url": "https://open.spotify.com/artist/3AA28KZvwAUcZuOKwyblJQ",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 99,
+    "name": "Metro Boomin",
+    "listeners": "42.6M",
+    "type": "Solo",
+    "lat": 38.627003,
+    "lng": -90.199402,
+    "loc": "St. Louis, Missouri, USA",
+    "members": "Metro Boomin (born in St. Louis, Missouri)",
+    "desc": "Superproducer behind trap and hip-hop hits for Future, The Weeknd, and more.",
+    "spotify_url": "https://open.spotify.com/artist/0iEtIxbK0KxaSlF7G42ZOp",
+    "grammy_wins": 0
+  },
+  {
+    "rank": 100,
+    "name": "Kesha",
+    "listeners": "42.6M",
+    "type": "Solo",
+    "lat": 34.052235,
+    "lng": -118.243683,
+    "loc": "Los Angeles, California, USA",
+    "members": "Kesha (born in Los Angeles, California)",
+    "desc": "Pop and rock singer known for party anthems and empowerment anthems.",
+    "spotify_url": "https://open.spotify.com/artist/6LqNN22kT3074XbTVUrhzX",
+    "grammy_wins": 0
+  }
+];
+
+let map = null;
+
+/*
+  PIN LOADING: pre-generated images only.
+  Pins load from pin-images/1.png … pin-images/100.png (by artist rank).
+  Generate once: open tools/pin-generator.html, click "Generate pin-images.zip", unzip into spotify-map so pin-images/ is next to this file.
+  If an image fails to load, that marker falls back to the built-in label.
+*/
+
+async function initMap() {
+  const { Map3DElement, Marker3DElement, Marker3DInteractiveElement } = await google.maps.importLibrary('maps3d');
+
+  map = new Map3DElement({
+    // Start zoomed out so the full globe is visible,
+    // roughly centered on the Atlantic between the Americas and Europe/Africa.
+    center: { lat: 40, lng: -30, altitude: 0 },
+    tilt: 30,
+    heading: 0,
+    range: 2.7e7,
+    mode: 'HYBRID',
+    gestureHandling: 'GREEDY',
+  });
+  map.style.height = '100%';
+  map.style.width = '100%';
+  document.getElementById('map').appendChild(map);
+
+  await new Promise(resolve => {
+    if (map.steadyState !== undefined) map.addEventListener('gmp-steadystate', resolve, { once: true });
+    else setTimeout(resolve, 1500);
+  });
+
+  var pinHeight = 48;
+  function loadAndDownscale(rank) {
+    return new Promise(function(resolve, reject) {
+      var big = document.createElement('img');
+      big.crossOrigin = 'anonymous';
+      big.onload = function() {
+        var w = big.naturalWidth, h = big.naturalHeight;
+        var scale = pinHeight / h;
+        var cw = Math.round(w * scale);
+        var ch = pinHeight;
+        var c = document.createElement('canvas');
+        c.width = cw;
+        c.height = ch;
+        var ctx = c.getContext('2d');
+        ctx.drawImage(big, 0, 0, cw, ch);
+        var small = document.createElement('img');
+        small.alt = '';
+        small.src = c.toDataURL('image/png');
+        resolve(small);
+      };
+      big.onerror = reject;
+      big.src = 'pin-images/' + rank + '.png';
+    });
+  }
+
+  for (var i = 0; i < artists.length; i++) {
+    (function(a) {
+      var lat = a.lat, lng = a.lng;
+      if (a.plus_code) {
+        var decoded = decodePlusCode(a.plus_code);
+        if (decoded) {
+          lat = decoded.latitudeCenter;
+          lng = decoded.longitudeCenter;
+        }
+      }
+      loadAndDownscale(a.rank).then(function(smallImg) {
+        smallImg.alt = a.name;
+        var template = document.createElement('template');
+        template.content.appendChild(smallImg);
+        var marker = new Marker3DInteractiveElement({
+          position: { lat: lat, lng: lng },
+          altitudeMode: 'CLAMP_TO_GROUND',
+        });
+        marker.appendChild(template);
+        marker.title = '#' + a.rank + ' ' + a.name;
+        function openPanel() { showPanel(a); }
+        marker.addEventListener('gmp-click', openPanel);
+        marker.addEventListener('click', openPanel);
+        map.append(marker);
+      }).catch(function() {
+        var label = a.rank <= 3 ? ['🥇', '🥈', '🥉'][a.rank - 1] + ' #' + a.rank : '#' + a.rank;
+        var fallback = new Marker3DElement({
+          position: { lat: lat, lng: lng },
+          altitudeMode: 'CLAMP_TO_GROUND',
+          label: String(label),
+        });
+        fallback.title = '#' + a.rank + ' ' + a.name;
+        function openPanel() { showPanel(a); }
+        fallback.addEventListener('gmp-click', openPanel);
+        fallback.addEventListener('click', openPanel);
+        map.append(fallback);
+      });
+    })(artists[i]);
+  }
+
+  setupSearchHandlers();
+
+  // Flag to prevent the document click handler from immediately closing the 
+  // panel when a user clicks a map pin to open it.
+  window.isPanelOpening = false;
+
+  // Close panel when tapping/clicking outside of it anywhere on the page
+  document.body.addEventListener('click', function(e) {
+    if (window.isPanelOpening) {
+      window.isPanelOpening = false;
+      return;
+    }
+    var panel = document.getElementById('info-panel');
+    if (panel && panel.classList.contains('visible') && !panel.contains(e.target)) {
+      closePanel();
+    }
+  });
+}
+
+function getArtistCoords(a) {
+  var lat = a.lat, lng = a.lng;
+  if (a.plus_code) {
+    var decoded = decodePlusCode(a.plus_code);
+    if (decoded) {
+      lat = decoded.latitudeCenter;
+      lng = decoded.longitudeCenter;
+    }
+  }
+  return { lat: lat, lng: lng };
+}
+
+function searchArtists(query) {
+  if (!query || typeof query !== 'string') return [];
+  var q = query.trim().toLowerCase();
+  if (q.length === 0) return [];
+  var rankNum = parseInt(q.replace(/^#/, ''), 10);
+  var matchByRank = !isNaN(rankNum) && rankNum >= 1 && rankNum <= 100;
+  return artists.filter(function(a) {
+    if (matchByRank && a.rank === rankNum) return true;
+    return a.name.toLowerCase().indexOf(q) !== -1;
+  });
+}
+
+function flyToArtist(a) {
+  if (!map || !a) return;
+  var coords = getArtistCoords(a);
+  map.center = { lat: coords.lat, lng: coords.lng, altitude: 0 };
+  map.range = 2e6;
+  showPanel(a);
+}
+
+function handleSearch() {
+  var input = document.getElementById('artist-search');
+  var q = input ? input.value : '';
+  var matches = searchArtists(q);
+  if (matches.length === 0) {
+    alert('No artist found. Try another search.');
+    return;
+  }
+  flyToArtist(matches[0]);
+}
+
+function setupSearchHandlers() {
+  var btn = document.getElementById('search-btn');
+  var input = document.getElementById('artist-search');
+  if (btn) btn.addEventListener('click', handleSearch);
+  if (input) {
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') handleSearch();
+    });
+  }
+}
+
+var artistImageCache = {};
+
+function getSpotifyArtistId(spotifyUrl) {
+  if (!spotifyUrl) return null;
+  var m = spotifyUrl.match(/artist\/([a-zA-Z0-9]+)/);
+  return m ? m[1] : null;
+}
+
+function loadArtistImage(a) {
+  var imgEl = document.getElementById('p-artist-img');
+  var loadingEl = document.getElementById('panel-loading');
+  var panelEl = document.getElementById('info-panel');
+  var id = getSpotifyArtistId(a.spotify_url);
+  imgEl.style.display = 'none';
+  imgEl.src = '';
+  imgEl.alt = a.name;
+  if (loadingEl) loadingEl.style.display = 'flex';
+  if (!id) return;
+  if (artistImageCache[id]) {
+    imgEl.src = artistImageCache[id];
+    imgEl.style.display = 'block';
+    if (loadingEl) loadingEl.style.display = 'none';
+    return;
+  }
+  fetch('/api/artist/' + id)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var url = data && data.imageUrl;
+      if (url) {
+        artistImageCache[id] = url;
+        imgEl.src = url;
+        imgEl.style.display = 'block';
+      }
+      if (loadingEl) loadingEl.style.display = 'none';
+    })
+    .catch(function() {
+      if (loadingEl) loadingEl.style.display = 'none';
+    });
+}
+
+function getCountryFlag(locString) {
+  if (!locString) return '';
+  const str = locString.toLowerCase();
+  
+  if (str.includes('puerto rico')) return '🇵🇷';
+  if (str.includes('u.s.') || str.includes('usa') || str.includes('us ') || str.endsWith(' us')) return '🇺🇸';
+  if (str.includes('canada')) return '🇨🇦';
+  if (str.includes('uk') || str.includes('england') || str.includes('scotland') || str.includes('wales') || str.includes('northern ireland')) return '🇬🇧';
+  if (str.includes('colombia')) return '🇨🇴';
+  if (str.includes('australia')) return '🇦🇺';
+  if (str.includes('france')) return '🇫🇷';
+  if (str.includes('sweden')) return '🇸🇪';
+  if (str.includes('jamaica')) return '🇯🇲';
+  if (str.includes('india')) return '🇮🇳';
+  if (str.includes('cuba')) return '🇨🇺';
+  if (str.includes('barbados')) return '🇧🇧';
+  if (str.includes('ireland')) return '🇮🇪';
+  if (str.includes('philippines')) return '🇵🇭';
+  if (str.includes('trinidad')) return '🇹🇹';
+  if (str.includes('mexico')) return '🇲🇽';
+  if (str.includes('korea')) return '🇰🇷';
+
+  return '';
+}
+
+window.currentShownArtistRank = null;
+
+function goPrevArtist() {
+  if (!window.currentShownArtistRank || typeof artists === 'undefined') return;
+  var idx = artists.findIndex(function(a) { return a.rank === window.currentShownArtistRank; });
+  if (idx === -1) return;
+  var prevIdx = (idx - 1 + artists.length) % artists.length;
+  flyToArtist(artists[prevIdx]);
+}
+
+function goNextArtist() {
+  if (!window.currentShownArtistRank || typeof artists === 'undefined') return;
+  var idx = artists.findIndex(function(a) { return a.rank === window.currentShownArtistRank; });
+  if (idx === -1) return;
+  var nextIdx = (idx + 1) % artists.length;
+  flyToArtist(artists[nextIdx]);
+}
+
+function showPanel(a) {
+  window.isPanelOpening = true;
+  window.currentShownArtistRank = a.rank;
+  var panelEl = document.getElementById('info-panel');
+  document.getElementById('p-rank').textContent = `#${a.rank} Worldwide`;
+  document.getElementById('p-flag').textContent = getCountryFlag(a.loc);
+  document.getElementById('p-name').textContent = a.name;
+  document.getElementById('p-listeners').textContent = a.listeners;
+  const grammyBox = document.getElementById('p-grammy-box');
+  const grammyVal = document.getElementById('p-grammy');
+  const statsRow = document.querySelector('.panel-stats-row');
+  if (a.grammy_wins != null && a.grammy_wins !== undefined && a.grammy_wins > 0) {
+    grammyBox.style.display = 'block';
+    grammyVal.textContent = a.grammy_wins;
+    if (statsRow) statsRow.classList.remove('single');
+  } else {
+    grammyBox.style.display = 'none';
+    if (statsRow) statsRow.classList.add('single');
+  }
+  document.getElementById('p-desc').textContent = a.desc;
+  document.getElementById('p-spotify').href = a.spotify_url;
+
+  document.getElementById('p-loc-text').textContent = a.loc;
+
+  loadArtistImage(a);
+
+  if (panelEl) {
+    panelEl.classList.add('visible');
+    panelEl.scrollTop = 0;
+  }
+}
+
+function closePanel() {
+  var panelEl = document.getElementById('info-panel');
+  if (panelEl) {
+    panelEl.classList.remove('visible');
+    panelEl.style.minHeight = '';
+  }
+}
+</script>
+
+<script async
+  src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=marker,maps3d&callback=initMap">
+</script>
+
+</body>
+</html>

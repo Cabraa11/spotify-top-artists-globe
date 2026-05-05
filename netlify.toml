@@ -1,0 +1,9 @@
+[build]
+  publish = "."          # serve files from the project root (index.html is here)
+  functions = "netlify/functions"
+
+# Rewrite /api/artist/<id> → the Netlify Function
+[[redirects]]
+  from = "/api/artist/:id"
+  to = "/.netlify/functions/artist/:id"
+  status = 200

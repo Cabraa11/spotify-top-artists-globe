@@ -1,0 +1,5 @@
+# Local secrets — never commit these
+config/spotify_credentials.json
+config/google_api_key.txt
+.env
+.env.*

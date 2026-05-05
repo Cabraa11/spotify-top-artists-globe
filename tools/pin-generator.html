@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pin image generator – run once, then use pin-images/ on the map</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #121212; color: #fff; padding: 24px; max-width: 560px; margin: 0 auto; }
+    h1 { color: #1DB954; font-size: 22px; margin-bottom: 8px; }
+    p { color: #b3b3b3; font-size: 14px; line-height: 1.5; margin-bottom: 20px; }
+    button { background: #1DB954; color: #000; border: none; padding: 12px 24px; font-size: 16px; font-weight: 700; border-radius: 24px; cursor: pointer; }
+    button:hover { background: #1ed760; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    #status { margin-top: 16px; font-size: 14px; color: #e5e5e5; }
+    .custom-pin {
+      background: #1DB954;
+      color: #ffffff;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      border: 1px solid #fff;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>Generate pin images (one-time)</h1>
+  <p>Creates high-quality PNGs for all 100 artists and downloads <code>pin-images.zip</code>. Unzip it into the <strong>spotify-map</strong> folder so <code>pin-images/</code> sits next to <code>index.html</code>. The map will load those images.</p>
+  <button id="go">Generate pin-images.zip</button>
+  <div id="status"></div>
+
+  <script>
+    window.PIN_ARTISTS = [{"rank":1,"name":"Bruno Mars"},{"rank":2,"name":"Bad Bunny"},{"rank":3,"name":"The Weeknd"},{"rank":4,"name":"Rihanna"},{"rank":5,"name":"Taylor Swift"},{"rank":6,"name":"Justin Bieber"},{"rank":7,"name":"Lady Gaga"},{"rank":8,"name":"Coldplay"},{"rank":9,"name":"Drake"},{"rank":10,"name":"Billie Eilish"},{"rank":11,"name":"Ed Sheeran"},{"rank":12,"name":"Ariana Grande"},{"rank":13,"name":"J Balvin"},{"rank":14,"name":"David Guetta"},{"rank":15,"name":"Shakira"},{"rank":16,"name":"Kendrick Lamar"},{"rank":17,"name":"Maroon 5"},{"rank":18,"name":"Eminem"},{"rank":19,"name":"Calvin Harris"},{"rank":20,"name":"SZA"},{"rank":21,"name":"Kanye West"},{"rank":22,"name":"Pitbull"},{"rank":23,"name":"Dua Lipa"},{"rank":24,"name":"Lana Del Rey"},{"rank":25,"name":"Zara Larsson"},{"rank":26,"name":"Daddy Yankee"},{"rank":27,"name":"Sabrina Carpenter"},{"rank":28,"name":"Harry Styles"},{"rank":29,"name":"Katy Perry"},{"rank":30,"name":"Sia"},{"rank":31,"name":"Post Malone"},{"rank":32,"name":"Michael Jackson"},{"rank":33,"name":"Olivia Dean"},{"rank":34,"name":"sombr"},{"rank":35,"name":"Travis Scott"},{"rank":36,"name":"Chris Brown"},{"rank":37,"name":"Sean Paul"},{"rank":38,"name":"Rauw Alejandro"},{"rank":39,"name":"Adele"},{"rank":40,"name":"Black Eyed Peas"},{"rank":41,"name":"Doja Cat"},{"rank":42,"name":"RAYE"},{"rank":43,"name":"Beyoncé"},{"rank":44,"name":"Arctic Monkeys"},{"rank":45,"name":"Future"},{"rank":46,"name":"Linkin Park"},{"rank":47,"name":"Miley Cyrus"},{"rank":48,"name":"Imagine Dragons"},{"rank":49,"name":"Arijit Singh"},{"rank":50,"name":"Alex Warren"},{"rank":51,"name":"KAROL G"},{"rank":52,"name":"Ozuna"},{"rank":53,"name":"Shreya Ghoshal"},{"rank":54,"name":"Sam Smith"},{"rank":55,"name":"Queen"},{"rank":56,"name":"Halsey"},{"rank":57,"name":"Khalid"},{"rank":58,"name":"Djo"},{"rank":59,"name":"Fleetwood Mac"},{"rank":60,"name":"Marshmello"},{"rank":61,"name":"Justin Timberlake"},{"rank":62,"name":"DJ Snake"},{"rank":63,"name":"The Chainsmokers"},{"rank":64,"name":"Tate McRae"},{"rank":65,"name":"Ellie Goulding"},{"rank":66,"name":"Maluma"},{"rank":67,"name":"Don Omar"},{"rank":68,"name":"Olivia Rodrigo"},{"rank":69,"name":"Pritam"},{"rank":70,"name":"Lil Wayne"},{"rank":71,"name":"A.R. Rahman"},{"rank":72,"name":"Elton John"},{"rank":73,"name":"Don Toliver"},{"rank":74,"name":"Britney Spears"},{"rank":75,"name":"The Neighbourhood"},{"rank":76,"name":"USHER"},{"rank":77,"name":"Charlie Puth"},{"rank":78,"name":"Ne-Yo"},{"rank":79,"name":"Tame Impala"},{"rank":80,"name":"Red Hot Chili Peppers"},{"rank":81,"name":"Peso Pluma"},{"rank":82,"name":"OneRepublic"},{"rank":83,"name":"50 Cent"},{"rank":84,"name":"Fuerza Regida"},{"rank":85,"name":"Farruko"},{"rank":86,"name":"Anuel AA"},{"rank":87,"name":"Wiz Khalifa"},{"rank":88,"name":"JENNIE"},{"rank":89,"name":"Radiohead"},{"rank":90,"name":"Nicki Minaj"},{"rank":91,"name":"Shawn Mendes"},{"rank":92,"name":"One Direction"},{"rank":93,"name":"Playboi Carti"},{"rank":94,"name":"Benson Boone"},{"rank":95,"name":"Camila Cabello"},{"rank":96,"name":"A$AP Rocky"},{"rank":97,"name":"Madonna"},{"rank":98,"name":"Gorillaz"},{"rank":99,"name":"Metro Boomin"},{"rank":100,"name":"Kesha"}];
+    var artists = window.PIN_ARTISTS.slice();
+    function getPillLabel(a) {
+      if (a.rank === 1) return '🥇 #' + a.rank + ' ' + a.name;
+      if (a.rank === 2) return '🥈 #' + a.rank + ' ' + a.name;
+      if (a.rank === 3) return '🥉 #' + a.rank + ' ' + a.name;
+      return '#' + a.rank + ' ' + a.name;
+    }
+    function rasterizeOne(a) {
+      var div = document.createElement('div');
+      div.className = 'custom-pin';
+      div.textContent = getPillLabel(a);
+      div.style.position = 'absolute';
+      div.style.left = '-9999px';
+      div.style.top = '0';
+      document.body.appendChild(div);
+      return window.html2canvas(div, {
+        scale: 6,
+        backgroundColor: null,
+        logging: false,
+        useCORS: true,
+      }).then(function(canvas) {
+        document.body.removeChild(div);
+        return canvas.toDataURL('image/png');
+      });
+    }
+    function dataUrlToBase64(dataUrl) {
+      return dataUrl.split(',')[1] || '';
+    }
+    function updateStatus(text) {
+      document.getElementById('status').textContent = text;
+    }
+    document.getElementById('go').onclick = async function() {
+      var btn = this;
+      btn.disabled = true;
+      if (!artists.length) {
+        updateStatus('No artist list. Use embedded list or run from a server with pin-artists.json.');
+        btn.disabled = false;
+        return;
+      }
+      var zip = new JSZip();
+      var folder = zip.folder('pin-images');
+      var total = artists.length;
+      for (var i = 0; i < total; i++) {
+        updateStatus('Generating ' + (i + 1) + '/' + total + '…');
+        var dataUrl = await rasterizeOne(artists[i]);
+        folder.file(artists[i].rank + '.png', dataUrlToBase64(dataUrl), { base64: true });
+      }
+      updateStatus('Creating zip…');
+      var blob = await zip.generateAsync({ type: 'blob' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'pin-images.zip';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      updateStatus('Done. Download started. Unzip into spotify-map so pin-images/ is next to index.html.');
+      btn.disabled = false;
+    };
+    updateStatus('Loaded ' + artists.length + ' artists. Click the button to generate.');
+  </script>
+</body>
+</html>
